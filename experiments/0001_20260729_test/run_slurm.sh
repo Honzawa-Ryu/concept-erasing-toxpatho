@@ -9,7 +9,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=10g
 #SBATCH --time=196:00:00
-
+echo "debug: job is submitted"
 # 他の実験のジョブに依存させたい場合、有効化してjob_idを埋める
 # （job_idは outputs/{依存先exp}/latest_job_id.txt を参照。投入のたびに
 #  変わりうる値なので、都度手動で書き換えること）:

@@ -8,6 +8,9 @@ generate_color_from_id() {
     echo "#${hash}"
 }
 
+echo "debug: job is submitted to notify_slack.sh"
+
+
 # Slack通知を送信 (attachments形式で色付き)
 notify_slack() {
     local title="$1"
@@ -15,7 +18,9 @@ notify_slack() {
     local color="$3"
     local fields="$4"
     
+    echo "debug: before sending slack notification"
     [ -z "${SLACK_WEBHOOK_URL:-}" ] && return 0
+    echo "debug: sending slack notification"
     
     # JSON構築
     local payload=$(jq -nc \
@@ -35,7 +40,9 @@ notify_slack() {
         -H 'Content-type: application/json' \
         --data "$payload" \
         "${SLACK_WEBHOOK_URL}" \
-        > /dev/null
+        > /dev/null || true
+
+    return 0
 }
 
 _array_fields() {
@@ -46,6 +53,7 @@ _array_fields() {
 
 _extra_fields() {
     [ -n "${ADD_NOTIFY:-}" ] && echo "${ADD_NOTIFY}"
+    return 0
 }
 
 _append_optional_fields() {
@@ -59,6 +67,8 @@ ${array_info}"
     extra_info=$(_extra_fields)
     [ -n "${extra_info}" ] && _fields_ref="${_fields_ref}
 ${extra_info}"
+
+    return 0
 }
 
 notify_start() {
