@@ -7,8 +7,8 @@
 #SBATCH --export=ALL
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=20
-#SBATCH --mem=110g
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=10g
 #SBATCH --time=196:00:00
 
 # 他の実験のジョブに依存させたい場合、有効化してjob_idを埋める
