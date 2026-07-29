@@ -5,7 +5,6 @@
 #SBATCH --error=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0001_20260729_test/%j_0001_20260729_test.out
 #SBATCH --signal=B:USR1@7056
 #SBATCH --export=ALL
-#SBATCH --nodes=1
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=10g
