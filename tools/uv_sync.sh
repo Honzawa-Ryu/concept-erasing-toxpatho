@@ -8,6 +8,7 @@
 
 # Resolve absolute path of the project root
 PROJECT_ROOT="${SLURM_SUBMIT_DIR}"
+export SIF_PATH="${PROJECT_ROOT}/env.sif"
 
 echo "=========================================="
 echo "Starting uv sync on compute node..."
