@@ -1,0 +1,281 @@
+diff --git a/tools/uv_sync.sh b/tools/uv_sync.sh
+index 89c8511..90fa5e7 100644
+--- a/tools/uv_sync.sh
++++ b/tools/uv_sync.sh
+@@ -8,6 +8,7 @@
+ 
+ # Resolve absolute path of the project root
+ PROJECT_ROOT="${SLURM_SUBMIT_DIR}"
++export SIF_PATH="${PROJECT_ROOT}/env.sif"
+ 
+ echo "=========================================="
+ echo "Starting uv sync on compute node..."
+diff --git a/uv.lock b/uv.lock
+index e4811e3..2598635 100644
+--- a/uv.lock
++++ b/uv.lock
+@@ -1882,117 +1882,6 @@ wheels = [
+     { url = "https://files.pythonhosted.org/packages/e0/07/a000fe835f76b7e1143242ab1122e6362ef1c03f23f83a045c38859c2ae0/jupyterlab_server-2.28.0-py3-none-any.whl", hash = "sha256:e4355b148fdcf34d312bbbc80f22467d6d20460e8b8736bf235577dd18506968", size = 59830, upload-time = "2025-10-22T13:59:16.767Z" },
+ ]
+ 
+-[[package]]
+-name = "kg-with-pubmed"
+-version = "0.1.0"
+-source = { editable = "." }
+-dependencies = [
+-    { name = "accelerate" },
+-    { name = "bitsandbytes" },
+-    { name = "cython" },
+-    { name = "dask" },
+-    { name = "datasets" },
+-    { name = "duckdb" },
+-    { name = "elasticsearch" },
+-    { name = "evaluate" },
+-    { name = "fast-langdetect" },
+-    { name = "fastparquet" },
+-    { name = "huggingface-hub" },
+-    { name = "ipython" },
+-    { name = "jupyterlab" },
+-    { name = "lightgbm" },
+-    { name = "lxml" },
+-    { name = "matplotlib" },
+-    { name = "matplotlib-venn" },
+-    { name = "notebook" },
+-    { name = "numpy" },
+-    { name = "optuna" },
+-    { name = "pandas" },
+-    { name = "peft" },
+-    { name = "pip" },
+-    { name = "plotly" },
+-    { name = "polars" },
+-    { name = "psutil" },
+-    { name = "pyarrow" },
+-    { name = "pynvml" },
+-    { name = "python-dotenv" },
+-    { name = "requests" },
+-    { name = "safetensors" },
+-    { name = "scikit-learn" },
+-    { name = "scipy" },
+-    { name = "scispacy" },
+-    { name = "seaborn" },
+-    { name = "sentencepiece" },
+-    { name = "setuptools" },
+-    { name = "slackweb" },
+-    { name = "spacy" },
+-    { name = "tokenizers" },
+-    { name = "torch" },
+-    { name = "torchaudio" },
+-    { name = "torchvision" },
+-    { name = "tqdm" },
+-    { name = "transformers" },
+-    { name = "trl" },
+-    { name = "vllm" },
+-    { name = "wandb" },
+-    { name = "wheel" },
+-    { name = "xgboost" },
+-]
+-
+-[package.metadata]
+-requires-dist = [
+-    { name = "accelerate" },
+-    { name = "bitsandbytes" },
+-    { name = "cython" },
+-    { name = "dask" },
+-    { name = "datasets" },
+-    { name = "duckdb" },
+-    { name = "elasticsearch", specifier = ">=8.0.0,<9.0.0" },
+-    { name = "evaluate" },
+-    { name = "fast-langdetect" },
+-    { name = "fastparquet" },
+-    { name = "huggingface-hub" },
+-    { name = "ipython" },
+-    { name = "jupyterlab" },
+-    { name = "lightgbm" },
+-    { name = "lxml" },
+-    { name = "matplotlib" },
+-    { name = "matplotlib-venn", specifier = ">=1.1.2" },
+-    { name = "notebook" },
+-    { name = "numpy" },
+-    { name = "optuna" },
+-    { name = "pandas" },
+-    { name = "peft" },
+-    { name = "pip" },
+-    { name = "plotly" },
+-    { name = "polars" },
+-    { name = "psutil" },
+-    { name = "pyarrow" },
+-    { name = "pynvml" },
+-    { name = "python-dotenv" },
+-    { name = "requests" },
+-    { name = "safetensors" },
+-    { name = "scikit-learn" },
+-    { name = "scipy" },
+-    { name = "scispacy" },
+-    { name = "seaborn" },
+-    { name = "sentencepiece" },
+-    { name = "setuptools" },
+-    { name = "slackweb" },
+-    { name = "spacy" },
+-    { name = "tokenizers" },
+-    { name = "torch", specifier = "==2.11.0+cu130", index = "https://download.pytorch.org/whl/cu130" },
+-    { name = "torchaudio", index = "https://download.pytorch.org/whl/cu130" },
+-    { name = "torchvision", index = "https://download.pytorch.org/whl/cu130" },
+-    { name = "tqdm" },
+-    { name = "transformers" },
+-    { name = "trl" },
+-    { name = "vllm", specifier = ">=0.22.0" },
+-    { name = "wandb" },
+-    { name = "wheel" },
+-    { name = "xgboost" },
+-]
+-
+ [[package]]
+ name = "kiwisolver"
+ version = "1.5.0"
+@@ -3217,15 +3106,6 @@ wheels = [
+     { url = "https://files.pythonhosted.org/packages/10/e1/542a474affab20fd4a0f1836cb234e8493519da6b76899e30bcc5d990b8b/pillow-12.2.0-cp312-cp312-win_arm64.whl", hash = "sha256:af73337013e0b3b46f175e79492d96845b16126ddf79c438d7ea7ff27783a414", size = 2463612, upload-time = "2026-04-01T14:43:39.421Z" },
+ ]
+ 
+-[[package]]
+-name = "pip"
+-version = "26.1.2"
+-source = { registry = "https://pypi.org/simple" }
+-sdist = { url = "https://files.pythonhosted.org/packages/01/91/47e7d486260f618783899587af63ccf7980fb60245c3e63dd4571c6b57ad/pip-26.1.2.tar.gz", hash = "sha256:f49cd134c61cf2fd75e0ce2676db03e4054504a5a4986d00f8299ae632dc4605", size = 1840799, upload-time = "2026-05-31T17:33:58.56Z" }
+-wheels = [
+-    { url = "https://files.pythonhosted.org/packages/5d/95/6b5cb3461ea5673ba0995989746db58eb18b91b54dbf331e72f569540946/pip-26.1.2-py3-none-any.whl", hash = "sha256:382ff9f685ee3bc25864f820aa50505825f10f5458ffff07e30a6d96e5715cab", size = 1813144, upload-time = "2026-05-31T17:33:56.772Z" },
+-]
+-
+ [[package]]
+ name = "platformdirs"
+ version = "4.10.0"
+@@ -4317,6 +4197,111 @@ wheels = [
+     { url = "https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl", hash = "sha256:f0b0622e567335c8fabaaa659f1b33bcb6ddfe2e496071b743aa113f8774f2d3", size = 39814, upload-time = "2026-03-04T18:55:31.284Z" },
+ ]
+ 
++[[package]]
++name = "template-daily-research-experiments"
++version = "0.1.0"
++source = { editable = "." }
++dependencies = [
++    { name = "accelerate" },
++    { name = "bitsandbytes" },
++    { name = "cython" },
++    { name = "dask" },
++    { name = "datasets" },
++    { name = "duckdb" },
++    { name = "elasticsearch" },
++    { name = "evaluate" },
++    { name = "fast-langdetect" },
++    { name = "fastparquet" },
++    { name = "huggingface-hub" },
++    { name = "ipython" },
++    { name = "jupyterlab" },
++    { name = "lightgbm" },
++    { name = "lxml" },
++    { name = "matplotlib" },
++    { name = "matplotlib-venn" },
++    { name = "notebook" },
++    { name = "numpy" },
++    { name = "optuna" },
++    { name = "pandas" },
++    { name = "peft" },
++    { name = "plotly" },
++    { name = "polars" },
++    { name = "psutil" },
++    { name = "pyarrow" },
++    { name = "pynvml" },
++    { name = "python-dotenv" },
++    { name = "requests" },
++    { name = "safetensors" },
++    { name = "scikit-learn" },
++    { name = "scipy" },
++    { name = "scispacy" },
++    { name = "seaborn" },
++    { name = "sentencepiece" },
++    { name = "slackweb" },
++    { name = "spacy" },
++    { name = "tokenizers" },
++    { name = "torch" },
++    { name = "torchaudio" },
++    { name = "torchvision" },
++    { name = "tqdm" },
++    { name = "transformers" },
++    { name = "trl" },
++    { name = "vllm" },
++    { name = "wandb" },
++    { name = "xgboost" },
++]
++
++[package.metadata]
++requires-dist = [
++    { name = "accelerate" },
++    { name = "bitsandbytes" },
++    { name = "cython" },
++    { name = "dask" },
++    { name = "datasets" },
++    { name = "duckdb" },
++    { name = "elasticsearch", specifier = ">=8.0.0,<9.0.0" },
++    { name = "evaluate" },
++    { name = "fast-langdetect" },
++    { name = "fastparquet" },
++    { name = "huggingface-hub" },
++    { name = "ipython" },
++    { name = "jupyterlab" },
++    { name = "lightgbm" },
++    { name = "lxml" },
++    { name = "matplotlib" },
++    { name = "matplotlib-venn", specifier = ">=1.1.2" },
++    { name = "notebook" },
++    { name = "numpy" },
++    { name = "optuna" },
++    { name = "pandas" },
++    { name = "peft" },
++    { name = "plotly" },
++    { name = "polars" },
++    { name = "psutil" },
++    { name = "pyarrow" },
++    { name = "pynvml" },
++    { name = "python-dotenv" },
++    { name = "requests" },
++    { name = "safetensors" },
++    { name = "scikit-learn" },
++    { name = "scipy" },
++    { name = "scispacy" },
++    { name = "seaborn" },
++    { name = "sentencepiece" },
++    { name = "slackweb" },
++    { name = "spacy" },
++    { name = "tokenizers" },
++    { name = "torch", specifier = "==2.11.0+cu130", index = "https://download.pytorch.org/whl/cu130" },
++    { name = "torchaudio", index = "https://download.pytorch.org/whl/cu130" },
++    { name = "torchvision", index = "https://download.pytorch.org/whl/cu130" },
++    { name = "tqdm" },
++    { name = "transformers" },
++    { name = "trl" },
++    { name = "vllm", specifier = ">=0.22.0" },
++    { name = "wandb" },
++    { name = "xgboost" },
++]
++
+ [[package]]
+ name = "terminado"
+ version = "0.18.1"
+@@ -4993,18 +4978,6 @@ wheels = [
+     { url = "https://files.pythonhosted.org/packages/6f/28/258ebab549c2bf3e64d2b0217b973467394a9cea8c42f70418ca2c5d0d2e/websockets-16.0-py3-none-any.whl", hash = "sha256:1637db62fad1dc833276dded54215f2c7fa46912301a24bd94d45d46a011ceec", size = 171598, upload-time = "2026-01-10T09:23:45.395Z" },
+ ]
+ 
+-[[package]]
+-name = "wheel"
+-version = "0.47.0"
+-source = { registry = "https://pypi.org/simple" }
+-dependencies = [
+-    { name = "packaging" },
+-]
+-sdist = { url = "https://files.pythonhosted.org/packages/39/62/75f18a0f03b4219c456652c7780e4d749b929eb605c098ce3a5b6b6bc081/wheel-0.47.0.tar.gz", hash = "sha256:cc72bd1009ba0cf63922e28f94d9d83b920aa2bb28f798a31d0691b02fa3c9b3", size = 63854, upload-time = "2026-04-22T15:51:27.727Z" }
+-wheels = [
+-    { url = "https://files.pythonhosted.org/packages/87/1b/9e33c09813d65e248f7f773119148a612516a4bea93e9c6f545f78455b7c/wheel-0.47.0-py3-none-any.whl", hash = "sha256:212281cab4dff978f6cedd499cd893e1f620791ca6ff7107cf270781e587eced", size = 32218, upload-time = "2026-04-22T15:51:26.296Z" },
+-]
+-
+ [[package]]
+ name = "win32-setctime"
+ version = "1.2.0"
