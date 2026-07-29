@@ -8,4 +8,4 @@ if [ -d "${BASH_DIR}/.bashrc.d" ]; then
 fi
 unset BASH_DIR
 
-command -v jq || exit 2
+command -v jq || exit 2sour
