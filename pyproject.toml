@@ -53,6 +53,9 @@ dependencies = [
     "sentencepiece",
     "vllm>=0.22.0",
     "matplotlib-venn>=1.1.2",
+    "h5py",
+    "openslide-python",
+    "openslide-bin",
 ]
 
 
