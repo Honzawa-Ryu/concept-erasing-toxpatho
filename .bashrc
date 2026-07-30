@@ -8,4 +8,5 @@ if [ -d "${BASH_DIR}/.bashrc.d" ]; then
 fi
 unset BASH_DIR
 
-command -v jq || exit 2sour
+command -v jq || exit 2
+export SIF_PATH="./env.sif"

@@ -1,0 +1,50 @@
+diff --git a/.bashrc b/.bashrc
+index 7ebcd54..9281d29 100644
+--- a/.bashrc
++++ b/.bashrc
+@@ -8,4 +8,5 @@ if [ -d "${BASH_DIR}/.bashrc.d" ]; then
+ fi
+ unset BASH_DIR
+ 
+-command -v jq || exit 2sour
+\ No newline at end of file
++command -v jq || exit 2
++export SIF_PATH="./env.sif"
+\ No newline at end of file
+diff --git a/experiments/0001_20260729_test/run_slurm.sh b/experiments/0001_20260729_test/run_slurm.sh
+index 8f6f4eb..d91e3b3 100755
+--- a/experiments/0001_20260729_test/run_slurm.sh
++++ b/experiments/0001_20260729_test/run_slurm.sh
+@@ -9,7 +9,6 @@
+ #SBATCH --cpus-per-task=8
+ #SBATCH --mem=10g
+ #SBATCH --time=196:00:00
+-echo "debug: job is submitted"
+ # 他の実験のジョブに依存させたい場合、有効化してjob_idを埋める
+ # （job_idは outputs/{依存先exp}/latest_job_id.txt を参照。投入のたびに
+ #  変わりうる値なので、都度手動で書き換えること）:
+diff --git a/scripts/notify_slack.sh b/scripts/notify_slack.sh
+index 60ea25e..cdddf64 100644
+--- a/scripts/notify_slack.sh
++++ b/scripts/notify_slack.sh
+@@ -8,8 +8,6 @@ generate_color_from_id() {
+     echo "#${hash}"
+ }
+ 
+-echo "debug: job is submitted to notify_slack.sh"
+-
+ 
+ # Slack通知を送信 (attachments形式で色付き)
+ notify_slack() {
+@@ -18,10 +16,8 @@ notify_slack() {
+     local color="$3"
+     local fields="$4"
+     
+-    echo "debug: before sending slack notification"
+     [ -z "${SLACK_WEBHOOK_URL:-}" ] && return 0
+-    echo "debug: sending slack notification"
+-    
++
+     # JSON構築
+     local payload=$(jq -nc \
+         --arg title "$title" \

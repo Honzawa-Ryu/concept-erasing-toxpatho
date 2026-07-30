@@ -1,14 +1,16 @@
 #!/bin/bash
-#SBATCH --job-name=0001_20260729_test
+#SBATCH --job-name=0002_20260729_get_latent
 #SBATCH --partition=x-large-andre01
-#SBATCH --output=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0001_20260729_test/%j_0001_20260729_test.out
-#SBATCH --error=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0001_20260729_test/%j_0001_20260729_test.out
+#SBATCH --output=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0002_20260729_get_latent/%j_0002_20260729_get_latent.out
+#SBATCH --error=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0002_20260729_get_latent/%j_0002_20260729_get_latent.out
 #SBATCH --signal=B:USR1@7056
 #SBATCH --export=ALL
+#SBATCH --nodes=1
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=10g
+#SBATCH --cpus-per-task=20
+#SBATCH --mem=110g
 #SBATCH --time=196:00:00
+
 # 他の実験のジョブに依存させたい場合、有効化してjob_idを埋める
 # （job_idは outputs/{依存先exp}/latest_job_id.txt を参照。投入のたびに
 #  変わりうる値なので、都度手動で書き換えること）:
@@ -16,8 +18,8 @@
 
 # Array run にする場合、上の3行の --output/--error/この直後の --array を
 # 以下の2行に置き換える（%j→%A_%a、--array=0-N を追加。Nの決め方は下記参照）:
-# #SBATCH --output=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0001_20260729_test/%A_%a_0001_20260729_test.out
-# #SBATCH --error=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0001_20260729_test/%A_%a_0001_20260729_test.out
+# #SBATCH --output=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0002_20260729_get_latent/%A_%a_0002_20260729_get_latent.out
+# #SBATCH --error=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0002_20260729_get_latent/%A_%a_0002_20260729_get_latent.out
 # #SBATCH --array=0-N
 #
 # ⚠️ 注意: リソース(--gres/--cpus-per-task/--mem/--time)を変更したら、
@@ -27,7 +29,7 @@
 #          下記の Array run / Seq run の使用を推奨。
 
 export PROJECT_ROOT="/workspace/andre01/honzawa/concept-erasing-toxpatho"
-export EXP_NAME="0001_20260729_test"
+export EXP_NAME="0002_20260729_get_latent"
 
 # =====================================================
 # Storage

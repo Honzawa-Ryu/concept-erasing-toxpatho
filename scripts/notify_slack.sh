@@ -8,8 +8,6 @@ generate_color_from_id() {
     echo "#${hash}"
 }
 
-echo "debug: job is submitted to notify_slack.sh"
-
 
 # Slack通知を送信 (attachments形式で色付き)
 notify_slack() {
@@ -18,10 +16,8 @@ notify_slack() {
     local color="$3"
     local fields="$4"
     
-    echo "debug: before sending slack notification"
     [ -z "${SLACK_WEBHOOK_URL:-}" ] && return 0
-    echo "debug: sending slack notification"
-    
+
     # JSON構築
     local payload=$(jq -nc \
         --arg title "$title" \
