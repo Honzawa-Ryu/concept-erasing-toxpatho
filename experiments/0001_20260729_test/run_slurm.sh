@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=0001_20260729_test
 #SBATCH --partition=x-large-andre01
-#SBATCH --output=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0001_20260729_test/%j_0001_20260729_test.out
-#SBATCH --error=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0001_20260729_test/%j_0001_20260729_test.out
+#SBATCH --output=/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho/logs/0001_20260729_test/%j_0001_20260729_test.out
+#SBATCH --error=/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho/logs/0001_20260729_test/%j_0001_20260729_test.out
 #SBATCH --signal=B:USR1@7056
 #SBATCH --export=ALL
 #SBATCH --gres=gpu:1
@@ -16,8 +16,8 @@
 
 # Array run にする場合、上の3行の --output/--error/この直後の --array を
 # 以下の2行に置き換える（%j→%A_%a、--array=0-N を追加。Nの決め方は下記参照）:
-# #SBATCH --output=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0001_20260729_test/%A_%a_0001_20260729_test.out
-# #SBATCH --error=/workspace/andre01/honzawa/concept-erasing-toxpatho/logs/0001_20260729_test/%A_%a_0001_20260729_test.out
+# #SBATCH --output=/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho/logs/0001_20260729_test/%A_%a_0001_20260729_test.out
+# #SBATCH --error=/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho/logs/0001_20260729_test/%A_%a_0001_20260729_test.out
 # #SBATCH --array=0-N
 #
 # ⚠️ 注意: リソース(--gres/--cpus-per-task/--mem/--time)を変更したら、
@@ -26,7 +26,7 @@
 # ⚠️ 注意: シェル上での for/while ループによる複数組み合わせ実行は推奨しない。
 #          下記の Array run / Seq run の使用を推奨。
 
-export PROJECT_ROOT="/workspace/andre01/honzawa/concept-erasing-toxpatho"
+export PROJECT_ROOT="/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho"
 export EXP_NAME="0001_20260729_test"
 
 # =====================================================
