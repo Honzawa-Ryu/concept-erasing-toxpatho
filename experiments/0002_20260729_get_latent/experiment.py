@@ -103,7 +103,7 @@ def main() -> None:
     logger.info(f"seed:        {seed}")
 
     # ── Experiment logic ──────────────────────────────────────────────────────
-    from lib.data.extract import batch_process_directory
+    from lib.data_process.extract import batch_process_directory
 
     batch_process_directory(
         h5_dir=dataset_dir / "trident_processed/20x_224px_0px_overlap/patches",
