@@ -318,8 +318,8 @@ _handle_final_state() {
 # =====================================================
 
 on_error() {
-    trap - ERR
     local exit_code=$?
+    trap - ERR
     local line_no="${1:-unknown}"
 
     echo ""
