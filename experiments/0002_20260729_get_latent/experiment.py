@@ -64,6 +64,7 @@ def parse_args() -> argparse.Namespace:
     # Example:
     #   parser.add_argument("--model", required=True)
     #   parser.add_argument("--seed",  required=True)
+    parser.add_argument("--config", required=True, help="Path to the config.yml file.")
     return parser.parse_args()
 
 
