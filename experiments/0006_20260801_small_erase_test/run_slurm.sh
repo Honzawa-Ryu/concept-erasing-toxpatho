@@ -1,15 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=__EXP_NAME__
-#SBATCH --partition=__PARTITION__
-#SBATCH --output=__PROJECT_ROOT__/logs/__EXP_NAME__/%j___EXP_NAME__.out
-#SBATCH --error=__PROJECT_ROOT__/logs/__EXP_NAME__/%j___EXP_NAME__.out
-#SBATCH --signal=B:USR1@__SIGNAL_MARGIN__
+#SBATCH --job-name=0006_20260801_small_erase_test
+#SBATCH --partition=small-andre01
+#SBATCH --output=/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho/logs/0006_20260801_small_erase_test/%j_0006_20260801_small_erase_test.out
+#SBATCH --error=/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho/logs/0006_20260801_small_erase_test/%j_0006_20260801_small_erase_test.out
+#SBATCH --signal=B:USR1@30
 #SBATCH --export=ALL
 #SBATCH --nodes=1
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=64g
-#SBATCH --time=196:00:00
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=8g
+#SBATCH --time=00:20:00
 
 # 他の実験のジョブに依存させたい場合、有効化してjob_idを埋める
 # （job_idは outputs/{依存先exp}/latest_job_id.txt を参照。投入のたびに
@@ -18,8 +17,8 @@
 
 # Array run にする場合、上の3行の --output/--error/この直後の --array を
 # 以下の2行に置き換える（%j→%A_%a、--array=0-N を追加。Nの決め方は下記参照）:
-# #SBATCH --output=__PROJECT_ROOT__/logs/__EXP_NAME__/%A_%a___EXP_NAME__.out
-# #SBATCH --error=__PROJECT_ROOT__/logs/__EXP_NAME__/%A_%a___EXP_NAME__.out
+# #SBATCH --output=/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho/logs/0006_20260801_small_erase_test/%A_%a_0006_20260801_small_erase_test.out
+# #SBATCH --error=/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho/logs/0006_20260801_small_erase_test/%A_%a_0006_20260801_small_erase_test.out
 # #SBATCH --array=0-N
 #
 # ⚠️ 注意: リソース(--gres/--cpus-per-task/--mem/--time)を変更したら、
@@ -28,8 +27,8 @@
 # ⚠️ 注意: シェル上での for/while ループによる複数組み合わせ実行は推奨しない。
 #          下記の Array run / Seq run の使用を推奨。
 
-export PROJECT_ROOT="__PROJECT_ROOT__"
-export EXP_NAME="__EXP_NAME__"
+export PROJECT_ROOT="/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho"
+export EXP_NAME="0006_20260801_small_erase_test"
 
 # =====================================================
 # Storage
@@ -50,6 +49,10 @@ USE_LOCAL_SSD_OUTPUT=1
 #     "raw_slide"
 #     "trident_processed/20x_224px_0px_overlap/patches"
 # )
+
+SSD_INPUT_PATHS=(
+    "features_memmap_output"
+)
 
 # =====================================================
 # python path

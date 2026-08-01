@@ -95,6 +95,7 @@ def main() -> None:
 
     config = load_config(Path(__file__).parent)
     seed: int = config.get("seed", 42)
+    n_slides: int = config.get("n_slides", 10)
 
     write_run_metadata(run_dir, exp_name=exp_name, variant_key=variant_key)
 
@@ -102,15 +103,31 @@ def main() -> None:
     logger.info(f"run_dir:     {run_dir}")
     logger.info(f"dataset_dir: {dataset_dir}")
     logger.info(f"seed:        {seed}")
+    logger.info(f"n_slides:    {n_slides}")
 
     # ── Experiment logic ──────────────────────────────────────────────────────
+    # Smoke test combining experiment 0003 (batch-effect validation) and
+    # 0005 (LEACE concept erasure) on a small slide subset, so the full
+    # validate -> erase -> validate pipeline can be checked quickly.
     from lib.data_process.load import load_memmaps_to_ram
     from lib.validate.batch_effect import compute_eta_squared, compute_knn_accuracy
     from concept_erasure import LeaceEraser
     from torch.nn.functional import one_hot
 
-    X, y = load_memmaps_to_ram(dataset_dir / "features_memmap_output", feature_dim=1024, dtype="float32")
+    X_all, y_all = load_memmaps_to_ram(dataset_dir / "features_memmap_output", feature_dim=1024, dtype="float32")
 
+    # Deterministic subset: first n_slides slide-ids in sorted order.
+    slide_ids = np.unique(y_all)[:n_slides]
+    mask = np.isin(y_all, slide_ids)
+    X, y = X_all[mask], y_all[mask]
+    logger.info(f"Subset: {len(slide_ids)} slides, {X.shape[0]} samples")
+
+    # ── Before erasure (0003-style batch-effect validation) ────────────────
+    eta_before = compute_eta_squared(X, y)
+    knn_before = compute_knn_accuracy(X, y, n_neighbors=15, n_splits=5, random_state=seed)
+    logger.info(f"Before erasure: eta_sq_mean={eta_before['eta_sq_mean']:.4f} knn_acc={knn_before:.4f}")
+
+    # ── Erasure (0005-style LEACE) ───────────────────────────────────────────
     # y is an array of slide-id strings (object dtype); torch can't convert
     # that directly, so label-encode to ints before one-hot encoding.
     unique_labels, y_codes = np.unique(y, return_inverse=True)
@@ -118,15 +135,25 @@ def main() -> None:
     X_tensor = torch.from_numpy(X).float()
     y_tensor = one_hot(torch.from_numpy(y_codes).long(), num_classes=len(unique_labels)).float()
 
-    eracer = LeaceEraser.fit(X_tensor, y_tensor)
-    X_erased = eracer(X_tensor).numpy()
+    eraser = LeaceEraser.fit(X_tensor, y_tensor)
+    X_erased = eraser(X_tensor).numpy()
 
-    compute_eta_squared_results = compute_eta_squared(X_erased, y)
-    compute_knn_accuracy_results = compute_knn_accuracy(X_erased, y, n_neighbors=15, n_splits=5, random_state=seed)
+    # ── After erasure (0003-style batch-effect validation) ──────────────────
+    eta_after = compute_eta_squared(X_erased, y)
+    knn_after = compute_knn_accuracy(X_erased, y, n_neighbors=15, n_splits=5, random_state=seed)
+    logger.info(f"After erasure:  eta_sq_mean={eta_after['eta_sq_mean']:.4f} knn_acc={knn_after:.4f}")
 
     results = {
-        "compute_eta_squared": compute_eta_squared_results,
-        "compute_knn_accuracy": compute_knn_accuracy_results,
+        "n_slides": int(len(slide_ids)),
+        "n_samples": int(X.shape[0]),
+        "before_erasure": {
+            "compute_eta_squared": eta_before,
+            "compute_knn_accuracy": knn_before,
+        },
+        "after_erasure": {
+            "compute_eta_squared": eta_after,
+            "compute_knn_accuracy": knn_after,
+        },
     }
 
     # ── Save results ──────────────────────────────────────────────────────────
