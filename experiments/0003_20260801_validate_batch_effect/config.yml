@@ -10,3 +10,7 @@
 seed: 42
 # max_tokens: 512
 # temperature: 0.0
+
+# スライド1枚あたり features_uni_v1/*.h5 からサンプリングするpatch数。
+# 998スライド全体でKNN(5-fold CV, brute force)にかけるため、0004より小さめに抑える。
+num_samples_per_slide: 50

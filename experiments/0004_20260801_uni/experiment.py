@@ -104,15 +104,16 @@ def main() -> None:
 
     # ── Experiment logic ──────────────────────────────────────────────────────
     from lib.data_process.extract import batch_process_feature_directory
-    
+
+    num_samples_per_slide = config.get("num_samples_per_slide", 1000)
+
     batch_process_feature_directory(
-        feature_dir=dataset_dir,
+        feature_h5_dir=dataset_dir / "trident_processed/20x_224px_0px_overlap/features_uni_v1",
         output_base_dir=run_dir / "memmap_output",
-        num_samples_per_slide=1000,  # Example: Sample 1000 patches per slide
+        num_samples_per_file=num_samples_per_slide,
         feature_key="features",
-        seed=seed
     )
-    
+
     results: dict = {}
 
     # ── Save results ──────────────────────────────────────────────────────────

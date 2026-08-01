@@ -450,9 +450,22 @@ if [ "${USE_LOCAL_SSD_INPUT:-0}" -eq 1 ]; then
 
     mkdir -p "${SCRATCH_DIR}/data"
 
-    rsync -a \
-        "${PROJECT_ROOT}/data/" \
-        "${SCRATCH_DIR}/data/"
+    if declare -p SSD_INPUT_PATHS &>/dev/null; then
+        # run_slurm.sh 側で SSD_INPUT_PATHS=("raw_slide" "trident_processed/...")
+        # のように宣言されている場合、列挙されたサブパスのみ転送する
+        # （data/ 全体が大きく、実験ごとに使うサブセットが異なる場合に無駄な
+        #  転送を避けるため。空配列 SSD_INPUT_PATHS=() ならデータを一切
+        #  転送しない）。未宣言時は後方互換のため data/ 全体を転送する。
+        for p in "${SSD_INPUT_PATHS[@]}"; do
+            rsync -a --relative \
+                "${PROJECT_ROOT}/data/./${p}" \
+                "${SCRATCH_DIR}/data/"
+        done
+    else
+        rsync -a \
+            "${PROJECT_ROOT}/data/" \
+            "${SCRATCH_DIR}/data/"
+    fi
 
     export DATASET_DIR="${SCRATCH_DIR}/data"
 

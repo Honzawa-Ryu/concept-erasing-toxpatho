@@ -103,9 +103,38 @@ def main() -> None:
     logger.info(f"seed:        {seed}")
 
     # ── Experiment logic ──────────────────────────────────────────────────────
-    # TODO: implement experiment here.
+    # スライドIDそのものを「無料のバッチラベル」として使い、UNI特徴量がどれだけ
+    # スライド識別性（=バッチ効果）に支配されているかを検証する
+    # （wsi-adプロジェクトのバッチ効果検証と同じ考え方）。
+    from lib.validate.batch_effect import (
+        compute_eta_squared,
+        compute_knn_accuracy,
+        load_sampled_features,
+    )
 
-    results: dict = {}
+    num_samples_per_slide = config.get("num_samples_per_slide", 50)
+
+    X, y = load_sampled_features(
+        feature_h5_dir=dataset_dir / "trident_processed/20x_224px_0px_overlap/features_uni_v1",
+        num_samples_per_slide=num_samples_per_slide,
+        feature_key="features",
+        seed=seed,
+    )
+    logger.info(f"Loaded features: X={X.shape}, slides={len(np.unique(y))}")
+
+    eta_sq = compute_eta_squared(X, y)
+    knn_acc = compute_knn_accuracy(X, y, random_state=seed)
+
+    logger.info(f"eta_squared: {eta_sq}")
+    logger.info(f"knn_accuracy (slide_id): {knn_acc}")
+
+    results: dict = {
+        "num_slides": int(len(np.unique(y))),
+        "num_samples": int(len(y)),
+        "num_samples_per_slide": num_samples_per_slide,
+        "eta_squared": {k: float(v) for k, v in eta_sq.items()},
+        "knn_accuracy_slide_id": knn_acc,
+    }
 
     # ── Save results ──────────────────────────────────────────────────────────
     (run_dir / "results.json").write_text(

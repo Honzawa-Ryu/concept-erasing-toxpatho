@@ -10,3 +10,6 @@
 seed: 42
 # max_tokens: 512
 # temperature: 0.0
+
+# スライド1枚あたり features_uni_v1/*.h5 からサンプリングする patch 数
+num_samples_per_slide: 1000
