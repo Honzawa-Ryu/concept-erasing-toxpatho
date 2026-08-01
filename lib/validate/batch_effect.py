@@ -53,10 +53,10 @@ def compute_eta_squared(X: np.ndarray, y: np.ndarray) -> Dict[str, float]:
     eta_sq_per_dim = ss_between / ss_total
 
     return {
-        "eta_sq_mean": np.mean(eta_sq_per_dim),
-        "eta_sq_median": np.median(eta_sq_per_dim),
-        "eta_sq_max": np.max(eta_sq_per_dim),
-        "eta_sq_var": np.var(eta_sq_per_dim)
+        "eta_sq_mean": float(np.mean(eta_sq_per_dim)),
+        "eta_sq_median": float(np.median(eta_sq_per_dim)),
+        "eta_sq_max": float(np.max(eta_sq_per_dim)),
+        "eta_sq_var": float(np.var(eta_sq_per_dim))
     }
 
 
