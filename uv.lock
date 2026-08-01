@@ -512,6 +512,18 @@ wheels = [
 ]
 
 [[package]]
+name = "concept-erasure"
+version = "0.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "torch" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a4/33/e2b5ad6331faa1fc6441c4d48c8c59013da126b2aa61ae299cf4529b8e26/concept-erasure-0.2.4.tar.gz", hash = "sha256:3f2a8f3a9713c7a906c4013b1d94594ca588af7124f04541ca6b4ea72f04ce90", size = 24999, upload-time = "2024-01-10T20:18:45.786Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/05/3f/859285794eba7e6d215e2bdf1ff81eb957b69a6c30577cf04e64782d4411/concept_erasure-0.2.4-py3-none-any.whl", hash = "sha256:a7665b49d97c6aa3bfd504ca724ef460bb61237aa510ae31e9550de8619806af", size = 25691, upload-time = "2024-01-10T20:18:44.242Z" },
+]
+
+[[package]]
 name = "confection"
 version = "0.1.5"
 source = { registry = "https://pypi.org/simple" }
@@ -4250,6 +4262,7 @@ source = { editable = "." }
 dependencies = [
     { name = "accelerate" },
     { name = "bitsandbytes" },
+    { name = "concept-erasure" },
     { name = "cython" },
     { name = "dask" },
     { name = "datasets" },
@@ -4304,6 +4317,7 @@ dependencies = [
 requires-dist = [
     { name = "accelerate" },
     { name = "bitsandbytes" },
+    { name = "concept-erasure" },
     { name = "cython" },
     { name = "dask" },
     { name = "datasets" },
