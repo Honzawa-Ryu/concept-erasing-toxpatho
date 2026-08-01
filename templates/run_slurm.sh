@@ -41,6 +41,16 @@ export EXP_NAME="__EXP_NAME__"
 USE_LOCAL_SSD_INPUT=1
 USE_LOCAL_SSD_OUTPUT=1
 
+# data/ が大きく、この実験では一部のサブパスしか使わない場合は
+# SSD_INPUT_PATHS を指定すると、そのサブパスのみ /scratch に転送される
+# （未指定なら従来通り data/ 全体を転送）。
+# この実験が data/ を一切使わないなら SSD_INPUT_PATHS=() とする。
+# 例:
+# SSD_INPUT_PATHS=(
+#     "raw_slide"
+#     "trident_processed/20x_224px_0px_overlap/patches"
+# )
+
 # =====================================================
 # python path
 # =====================================================
