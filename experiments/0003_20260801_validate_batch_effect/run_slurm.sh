@@ -43,7 +43,7 @@ USE_LOCAL_SSD_OUTPUT=1
 
 # この実験はUNI特徴量h5(features_uni_v1)しか読まないため、raw_slide等は転送しない
 SSD_INPUT_PATHS=(
-    "trident_processed/20x_224px_0px_overlap/features_uni_v1"
+    "trident_processed/20x_224px_0px_overlap/features_memmap_output"
 )
 
 # =====================================================
