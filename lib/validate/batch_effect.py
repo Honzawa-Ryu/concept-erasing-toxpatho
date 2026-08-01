@@ -1,8 +1,58 @@
+from pathlib import Path
+from typing import Dict, Tuple, Union
+
+import h5py
 import numpy as np
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
-from typing import Dict, Union
 
+
+def load_sampled_features(
+    feature_h5_dir: Union[str, Path],
+    num_samples_per_slide: int,
+    feature_key: str = "features",
+    seed: int = 42,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    スライドごとのUNI特徴量h5( "{slide_id}.h5", datasetキー=feature_key )から
+    各スライド最大 num_samples_per_slide 件をサンプリングし、全スライド分を結合する。
+
+    スライドIDそのものを「無料のバッチラベル」として y に使う
+    （wsi-adプロジェクトのバッチ効果検証と同じ考え方）。
+
+    Returns
+    -------
+    X : np.ndarray, shape (num_samples_total, feature_dim)
+    y : np.ndarray, shape (num_samples_total,)
+        各行がどのスライド由来かを示すslide_id文字列。
+    """
+    feature_dir = Path(feature_h5_dir)
+    rng = np.random.default_rng(seed)
+
+    X_parts = []
+    y_parts = []
+
+    for h5_file in sorted(feature_dir.glob("*.h5")):
+        slide_id = h5_file.stem
+
+        with h5py.File(h5_file, "r") as f:
+            features = f[feature_key][:]
+
+        total = len(features)
+        if num_samples_per_slide >= total:
+            sampled = features
+        else:
+            indices = rng.choice(total, size=num_samples_per_slide, replace=False)
+            indices.sort()
+            sampled = features[indices]
+
+        X_parts.append(sampled)
+        y_parts.append(np.full(len(sampled), slide_id))
+
+    if not X_parts:
+        raise RuntimeError(f"No feature h5 files found under {feature_dir}")
+
+    return np.concatenate(X_parts, axis=0), np.concatenate(y_parts, axis=0)
 
 
 def compute_eta_squared(X: np.ndarray, y: np.ndarray) -> Dict[str, float]:

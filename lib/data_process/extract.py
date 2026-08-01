@@ -193,14 +193,14 @@ def batch_process_feature_directory(
     feature_h5_path = Path(feature_h5_dir)
     output_path = Path(output_base_dir)
 
-    # H5ファイルを探索 ("*_features.h5")
-    feature_h5_files = list(feature_h5_path.glob("*_features.h5"))
+    # H5ファイルを探索（trident出力は "{slide_id}.h5" 形式で接尾辞を持たない）
+    feature_h5_files = list(feature_h5_path.glob("*.h5"))
 
     processed_count = 0
 
     for feature_h5_file in feature_h5_files:
-        # "2656_features.h5" から "2656" を抽出
-        file_id = feature_h5_file.name.replace("_features.h5", "")
+        # "2656.h5" から "2656" を抽出
+        file_id = feature_h5_file.stem
 
         # 出力ディレクトリはID名 ("2656") にする
         file_output_dir = output_path / file_id
