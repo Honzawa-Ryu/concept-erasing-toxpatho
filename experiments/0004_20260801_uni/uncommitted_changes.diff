@@ -1,0 +1,56 @@
+diff --git a/experiments/latest b/experiments/latest
+index d15eda1..3caac02 120000
+--- a/experiments/latest
++++ b/experiments/latest
+@@ -1 +1 @@
+-/workspace/andre01/honzawa/concept-erasing-toxpatho/experiments/0002_20260729_get_latent
+\ No newline at end of file
++/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho/experiments/0003_20260801_validate_batch_effect
+\ No newline at end of file
+diff --git a/lib/data_process/extract.py b/lib/data_process/extract.py
+index 38620e4..69de071 100644
+--- a/lib/data_process/extract.py
++++ b/lib/data_process/extract.py
+@@ -85,20 +85,22 @@ def batch_process_directory(
+     # H5ファイルを基準に探索 ("*_patches.h5")
+     h5_files = list(h5_path.glob("*_patches.h5"))
+ 
++    processed_count = 0
++
+     for h5_file in h5_files:
+         # "2656_patches.h5" から "2656" を抽出
+         slide_id = h5_file.name.replace("_patches.h5", "")
+-        
++
+         # 対応するSVSファイルのパスを構築
+         svs_file = svs_path / f"{slide_id}.svs"
+-        
++
+         if not svs_file.exists():
+             print(f"Warning: SVS file {svs_file.name} not found. Skipping.")
+             continue
+ 
+         # 出力ディレクトリはID名 ("2656") にする
+         slide_output_dir = output_path / slide_id
+-        
++
+         process_single_slide(
+             h5_path=h5_file,
+             svs_path=svs_file,
+@@ -107,6 +109,16 @@ def batch_process_directory(
+             patch_size=patch_size,
+             level=level
+         )
++        processed_count += 1
++
++    # 1枚も処理できなかった場合、そのまま黙って完了扱いにされる（＝空の結果が
++    # completion.json に「正式な完了」として残り、以後の再実行がガードで永久に
++    # スキップされ続ける）のを防ぐため、ここで明示的に失敗させる。
++    if processed_count == 0:
++        raise RuntimeError(
++            f"No slides were processed (found {len(h5_files)} H5 file(s), "
++            f"0 matched an SVS file under {svs_path})."
++        )
+ 
+ # 実行例
+ if __name__ == "__main__":
