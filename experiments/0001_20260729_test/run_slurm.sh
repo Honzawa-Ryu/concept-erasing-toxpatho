@@ -36,8 +36,8 @@ export EXP_NAME="0001_20260729_test"
 # （例: 出力を実行中にリアルタイムで/workspace側から監視したい等）。
 # =====================================================
 
-USE_LOCAL_SSD_INPUT=1
-USE_LOCAL_SSD_OUTPUT=1
+USE_LOCAL_SSD_INPUT=0
+USE_LOCAL_SSD_OUTPUT=0
 
 # =====================================================
 # python path
