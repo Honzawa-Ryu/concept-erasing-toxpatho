@@ -88,7 +88,9 @@ def compute_knn_accuracy(
     float
         KNN分類器の平均精度。
     """
-    knn = KNeighborsClassifier(n_neighbors=n_neighbors, metric='euclidean', n_jobs=-1)
+    # n_jobs=-1 is set on cross_val_score below, which already parallelizes
+    # across folds; parallelizing here too would oversubscribe CPUs/memory.
+    knn = KNeighborsClassifier(n_neighbors=n_neighbors, metric='euclidean', n_jobs=1)
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
     scores = cross_val_score(knn, X, y, cv=skf, scoring='accuracy', n_jobs=-1)
