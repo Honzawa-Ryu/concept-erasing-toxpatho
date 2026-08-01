@@ -31,6 +31,7 @@ def process_single_slide(
         total_patches = len(coords)
 
         if num_samples >= total_patches:
+            indices = np.arange(total_patches)
             sampled_coords = coords
         else:
             indices = rng.choice(total_patches, size=num_samples, replace=False)
@@ -42,8 +43,20 @@ def process_single_slide(
     dtype = np.uint8
 
     # 2. メタデータ保存
+    # indices/coords を残すことで、別プロセスで生成された他のmemmap（例: 特徴量側）
+    # とパッチ単位で対応づいているかを事後検証できるようにする。
     with open(meta_path, "w") as f:
-        json.dump({"shape": shape, "dtype": np.dtype(dtype).name}, f, indent=4)
+        json.dump(
+            {
+                "shape": shape,
+                "dtype": np.dtype(dtype).name,
+                "seed": seed,
+                "indices": indices.tolist(),
+                "coords": sampled_coords.tolist(),
+            },
+            f,
+            indent=4,
+        )
 
     # 3. Memmap作成とパッチ書き込み
     memmap_array = np.memmap(memmap_file, dtype=dtype, mode="w+", shape=shape)
@@ -73,7 +86,8 @@ def batch_process_directory(
     output_base_dir: str,
     num_samples_per_slide: int,
     patch_size: int = 224,
-    level: int = 0
+    level: int = 0,
+    seed: int = 42
 ):
     """
     指定された構造に基づき、H5ファイルとSVSファイルを紐づけて処理する
@@ -107,7 +121,8 @@ def batch_process_directory(
             output_dir=slide_output_dir,
             num_samples=num_samples_per_slide,
             patch_size=patch_size,
-            level=level
+            level=level,
+            seed=seed
         )
         processed_count += 1
 
@@ -158,21 +173,35 @@ def process_single_slide_feature(
     with h5py.File(feature_h5_path, "r") as src:
         features = src[feature_key][:]
         total_features = len(features)
+        coords = src["coords"][:] if "coords" in src else None
 
         if num_samples >= total_features:
+            indices = np.arange(total_features)
             sampled_features = features
         else:
             indices = rng.choice(total_features, size=num_samples, replace=False)
             indices.sort()
             sampled_features = features[indices]
 
+        sampled_coords = coords[indices] if coords is not None else None
+
     actual_num_samples = len(sampled_features)
     shape = sampled_features.shape
     dtype = sampled_features.dtype
 
     # 2. メタデータ保存
+    # indices/coords を残すことで、別プロセスで生成された他のmemmap（例: 画像側）
+    # とパッチ単位で対応づいているかを事後検証できるようにする。
+    meta = {
+        "shape": shape,
+        "dtype": str(dtype),
+        "seed": seed,
+        "indices": indices.tolist(),
+    }
+    if sampled_coords is not None:
+        meta["coords"] = sampled_coords.tolist()
     with open(meta_path, "w") as f:
-        json.dump({"shape": shape, "dtype": str(dtype)}, f, indent=4)
+        json.dump(meta, f, indent=4)
 
     # 3. Memmap作成と特徴量書き込み
     memmap_array = np.memmap(memmap_file, dtype=dtype, mode="w+", shape=shape)
@@ -185,7 +214,8 @@ def batch_process_feature_directory(
     feature_h5_dir: str,
     output_base_dir: str,
     num_samples_per_file: int,
-    feature_key: str = "features"
+    feature_key: str = "features",
+    seed: int = 42
 ):
     """
     指定されたディレクトリ内の特徴量H5ファイルを処理する
@@ -209,7 +239,8 @@ def batch_process_feature_directory(
             feature_h5_path=feature_h5_file,
             output_dir=file_output_dir,
             num_samples=num_samples_per_file,
-            feature_key=feature_key
+            feature_key=feature_key,
+            seed=seed
         )
         processed_count += 1
 

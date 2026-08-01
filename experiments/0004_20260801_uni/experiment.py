@@ -113,6 +113,7 @@ def main() -> None:
         output_base_dir=run_dir / "memmap_output",
         num_samples_per_file=num_samples_per_slide,
         feature_key="features",
+        seed=seed,
     )
 
     results: dict = {}

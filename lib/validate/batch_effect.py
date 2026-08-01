@@ -96,3 +96,58 @@ def compute_knn_accuracy(
     scores = cross_val_score(knn, X, y, cv=skf, scoring='accuracy', n_jobs=-1)
 
     return float(np.mean(scores))
+
+
+def compute_mlp_probe_accuracy(
+    X: np.ndarray,
+    y: np.ndarray,
+    hidden_layer_sizes: tuple = (128,),
+    n_splits: int = 5,
+    random_state: int = 42,
+) -> float:
+    """Nonlinear probing: how well an MLP can still recover the erased concept.
+
+    KNN (compute_knn_accuracy) is already a nonlinear probe; this adds a
+    second model class as a cross-check. Written here for now; move to
+    lib/validate/ once the interface settles.
+    """
+    from sklearn.model_selection import StratifiedKFold, cross_val_score
+    from sklearn.neural_network import MLPClassifier
+
+    mlp = MLPClassifier(
+        hidden_layer_sizes=hidden_layer_sizes,
+        early_stopping=True,
+        max_iter=200,
+        random_state=random_state,
+    )
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    scores = cross_val_score(mlp, X, y, cv=skf, scoring="accuracy", n_jobs=-1)
+    return float(np.mean(scores))
+
+
+
+def compute_geometric_change(X: np.ndarray, X_erased: np.ndarray) -> dict:
+    """Geometric evaluation of how much erasure deformed the representation.
+
+    Written here for now; move to lib/validate/ once the interface settles.
+    """
+    diff = X_erased - X
+    mse = float(np.mean(diff ** 2))
+    mean_l2_distance = float(np.mean(np.linalg.norm(diff, axis=1)))
+
+    x_norm = np.linalg.norm(X, axis=1)
+    x_erased_norm = np.linalg.norm(X_erased, axis=1)
+    denom = np.where(x_norm * x_erased_norm == 0, 1e-10, x_norm * x_erased_norm)
+    cos_sim = np.sum(X * X_erased, axis=1) / denom
+
+    total_var_before = np.sum(np.var(X, axis=0))
+    total_var_after = np.sum(np.var(X_erased, axis=0))
+    variance_ratio = float(total_var_after / total_var_before) if total_var_before > 0 else 0.0
+
+    return {
+        "mse": mse,
+        "mean_l2_distance": mean_l2_distance,
+        "cosine_similarity_mean": float(np.mean(cos_sim)),
+        "cosine_similarity_std": float(np.std(cos_sim)),
+        "variance_ratio": variance_ratio,
+    }

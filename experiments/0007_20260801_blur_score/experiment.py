@@ -104,20 +104,41 @@ def main() -> None:
     logger.info(f"seed:        {seed}")
 
     # ── Experiment logic ──────────────────────────────────────────────────────
-    from lib.data_process.extract import batch_process_directory
+    # 画像パッチMemmap(data/memmap_output, exp0002)の各パッチに対しラプラシアン
+    # フィルタベースのぼやけスコアを計算する。後続の概念消去実験でyとして使うため、
+    # 元のパッチと同じindices/coords/seedを引き継いで保存する（メタ情報は
+    # lib/data_process/extract.pyが書き込んだmeta.jsonから引き継がれる）。
+    from lib.data_process.blur_score import batch_process_blur_score_directory
 
-    batch_process_directory(
-        h5_dir=dataset_dir / "trident_processed/20x_224px_0px_overlap/patches",
-        svs_dir=dataset_dir / "raw_slide",
-        output_base_dir=run_dir / "memmap_output",
-        num_samples_per_slide=1000,
-        patch_size=224,
-        level=0,
-        seed=seed
+    blur_output_dir = run_dir / "blur_score_output"
+
+    batch_process_blur_score_directory(
+        memmap_base_dir=dataset_dir / "memmap_output",
+        output_base_dir=blur_output_dir,
     )
-    
 
-    results: dict = {}
+    # ── 簡易集計（サニティチェック用） ───────────────────────────────────────
+    all_scores = []
+    for slide_dir in sorted(blur_output_dir.iterdir()):
+        score_file = slide_dir / "blur_scores.dat"
+        if not score_file.exists():
+            continue
+        all_scores.append(np.memmap(score_file, dtype="float32", mode="r"))
+    blur_scores = np.concatenate(all_scores) if all_scores else np.array([], dtype=np.float32)
+
+    logger.info(
+        f"Blur scores: n_slides={len(all_scores)} n_patches={blur_scores.size} "
+        f"mean={blur_scores.mean():.4f} std={blur_scores.std():.4f}"
+    )
+
+    results: dict = {
+        "n_slides": len(all_scores),
+        "n_patches": int(blur_scores.size),
+        "blur_score_mean": float(blur_scores.mean()),
+        "blur_score_std": float(blur_scores.std()),
+        "blur_score_min": float(blur_scores.min()),
+        "blur_score_max": float(blur_scores.max()),
+    }
 
     # ── Save results ──────────────────────────────────────────────────────────
     (run_dir / "results.json").write_text(

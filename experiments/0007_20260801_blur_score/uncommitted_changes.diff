@@ -1,0 +1,203 @@
+diff --git a/experiments/0002_20260729_get_latent/experiment.py b/experiments/0002_20260729_get_latent/experiment.py
+index af80d8c..2148e9c 100644
+--- a/experiments/0002_20260729_get_latent/experiment.py
++++ b/experiments/0002_20260729_get_latent/experiment.py
+@@ -112,7 +112,8 @@ def main() -> None:
+         output_base_dir=run_dir / "memmap_output",
+         num_samples_per_slide=1000,
+         patch_size=224,
+-        level=0
++        level=0,
++        seed=seed
+     )
+     
+ 
+diff --git a/experiments/0004_20260801_uni/experiment.py b/experiments/0004_20260801_uni/experiment.py
+index 0bf159e..b96eae7 100644
+--- a/experiments/0004_20260801_uni/experiment.py
++++ b/experiments/0004_20260801_uni/experiment.py
+@@ -113,6 +113,7 @@ def main() -> None:
+         output_base_dir=run_dir / "memmap_output",
+         num_samples_per_file=num_samples_per_slide,
+         feature_key="features",
++        seed=seed,
+     )
+ 
+     results: dict = {}
+diff --git a/lib/data_process/extract.py b/lib/data_process/extract.py
+index 13e086f..7c57fed 100644
+--- a/lib/data_process/extract.py
++++ b/lib/data_process/extract.py
+@@ -31,6 +31,7 @@ def process_single_slide(
+         total_patches = len(coords)
+ 
+         if num_samples >= total_patches:
++            indices = np.arange(total_patches)
+             sampled_coords = coords
+         else:
+             indices = rng.choice(total_patches, size=num_samples, replace=False)
+@@ -42,8 +43,20 @@ def process_single_slide(
+     dtype = np.uint8
+ 
+     # 2. メタデータ保存
++    # indices/coords を残すことで、別プロセスで生成された他のmemmap（例: 特徴量側）
++    # とパッチ単位で対応づいているかを事後検証できるようにする。
+     with open(meta_path, "w") as f:
+-        json.dump({"shape": shape, "dtype": np.dtype(dtype).name}, f, indent=4)
++        json.dump(
++            {
++                "shape": shape,
++                "dtype": np.dtype(dtype).name,
++                "seed": seed,
++                "indices": indices.tolist(),
++                "coords": sampled_coords.tolist(),
++            },
++            f,
++            indent=4,
++        )
+ 
+     # 3. Memmap作成とパッチ書き込み
+     memmap_array = np.memmap(memmap_file, dtype=dtype, mode="w+", shape=shape)
+@@ -73,7 +86,8 @@ def batch_process_directory(
+     output_base_dir: str,
+     num_samples_per_slide: int,
+     patch_size: int = 224,
+-    level: int = 0
++    level: int = 0,
++    seed: int = 42
+ ):
+     """
+     指定された構造に基づき、H5ファイルとSVSファイルを紐づけて処理する
+@@ -107,7 +121,8 @@ def batch_process_directory(
+             output_dir=slide_output_dir,
+             num_samples=num_samples_per_slide,
+             patch_size=patch_size,
+-            level=level
++            level=level,
++            seed=seed
+         )
+         processed_count += 1
+ 
+@@ -158,21 +173,35 @@ def process_single_slide_feature(
+     with h5py.File(feature_h5_path, "r") as src:
+         features = src[feature_key][:]
+         total_features = len(features)
++        coords = src["coords"][:] if "coords" in src else None
+ 
+         if num_samples >= total_features:
++            indices = np.arange(total_features)
+             sampled_features = features
+         else:
+             indices = rng.choice(total_features, size=num_samples, replace=False)
+             indices.sort()
+             sampled_features = features[indices]
+ 
++        sampled_coords = coords[indices] if coords is not None else None
++
+     actual_num_samples = len(sampled_features)
+     shape = sampled_features.shape
+     dtype = sampled_features.dtype
+ 
+     # 2. メタデータ保存
++    # indices/coords を残すことで、別プロセスで生成された他のmemmap（例: 画像側）
++    # とパッチ単位で対応づいているかを事後検証できるようにする。
++    meta = {
++        "shape": shape,
++        "dtype": str(dtype),
++        "seed": seed,
++        "indices": indices.tolist(),
++    }
++    if sampled_coords is not None:
++        meta["coords"] = sampled_coords.tolist()
+     with open(meta_path, "w") as f:
+-        json.dump({"shape": shape, "dtype": str(dtype)}, f, indent=4)
++        json.dump(meta, f, indent=4)
+ 
+     # 3. Memmap作成と特徴量書き込み
+     memmap_array = np.memmap(memmap_file, dtype=dtype, mode="w+", shape=shape)
+@@ -185,7 +214,8 @@ def batch_process_feature_directory(
+     feature_h5_dir: str,
+     output_base_dir: str,
+     num_samples_per_file: int,
+-    feature_key: str = "features"
++    feature_key: str = "features",
++    seed: int = 42
+ ):
+     """
+     指定されたディレクトリ内の特徴量H5ファイルを処理する
+@@ -209,7 +239,8 @@ def batch_process_feature_directory(
+             feature_h5_path=feature_h5_file,
+             output_dir=file_output_dir,
+             num_samples=num_samples_per_file,
+-            feature_key=feature_key
++            feature_key=feature_key,
++            seed=seed
+         )
+         processed_count += 1
+ 
+diff --git a/lib/validate/batch_effect.py b/lib/validate/batch_effect.py
+index 304b910..b823966 100644
+--- a/lib/validate/batch_effect.py
++++ b/lib/validate/batch_effect.py
+@@ -95,4 +95,59 @@ def compute_knn_accuracy(
+ 
+     scores = cross_val_score(knn, X, y, cv=skf, scoring='accuracy', n_jobs=-1)
+ 
+-    return float(np.mean(scores))
+\ No newline at end of file
++    return float(np.mean(scores))
++
++
++def compute_mlp_probe_accuracy(
++    X: np.ndarray,
++    y: np.ndarray,
++    hidden_layer_sizes: tuple = (128,),
++    n_splits: int = 5,
++    random_state: int = 42,
++) -> float:
++    """Nonlinear probing: how well an MLP can still recover the erased concept.
++
++    KNN (compute_knn_accuracy) is already a nonlinear probe; this adds a
++    second model class as a cross-check. Written here for now; move to
++    lib/validate/ once the interface settles.
++    """
++    from sklearn.model_selection import StratifiedKFold, cross_val_score
++    from sklearn.neural_network import MLPClassifier
++
++    mlp = MLPClassifier(
++        hidden_layer_sizes=hidden_layer_sizes,
++        early_stopping=True,
++        max_iter=200,
++        random_state=random_state,
++    )
++    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
++    scores = cross_val_score(mlp, X, y, cv=skf, scoring="accuracy", n_jobs=-1)
++    return float(np.mean(scores))
++
++
++
++def compute_geometric_change(X: np.ndarray, X_erased: np.ndarray) -> dict:
++    """Geometric evaluation of how much erasure deformed the representation.
++
++    Written here for now; move to lib/validate/ once the interface settles.
++    """
++    diff = X_erased - X
++    mse = float(np.mean(diff ** 2))
++    mean_l2_distance = float(np.mean(np.linalg.norm(diff, axis=1)))
++
++    x_norm = np.linalg.norm(X, axis=1)
++    x_erased_norm = np.linalg.norm(X_erased, axis=1)
++    denom = np.where(x_norm * x_erased_norm == 0, 1e-10, x_norm * x_erased_norm)
++    cos_sim = np.sum(X * X_erased, axis=1) / denom
++
++    total_var_before = np.sum(np.var(X, axis=0))
++    total_var_after = np.sum(np.var(X_erased, axis=0))
++    variance_ratio = float(total_var_after / total_var_before) if total_var_before > 0 else 0.0
++
++    return {
++        "mse": mse,
++        "mean_l2_distance": mean_l2_distance,
++        "cosine_similarity_mean": float(np.mean(cos_sim)),
++        "cosine_similarity_std": float(np.std(cos_sim)),
++        "variance_ratio": variance_ratio,
++    }
