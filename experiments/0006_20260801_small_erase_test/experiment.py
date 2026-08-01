@@ -56,6 +56,60 @@ def load_config(exp_dir: Path) -> dict:
         return yaml.safe_load(f) or {}
 
 
+def compute_geometric_change(X: np.ndarray, X_erased: np.ndarray) -> dict:
+    """Geometric evaluation of how much erasure deformed the representation.
+
+    Written here for now; move to lib/validate/ once the interface settles.
+    """
+    diff = X_erased - X
+    mse = float(np.mean(diff ** 2))
+    mean_l2_distance = float(np.mean(np.linalg.norm(diff, axis=1)))
+
+    x_norm = np.linalg.norm(X, axis=1)
+    x_erased_norm = np.linalg.norm(X_erased, axis=1)
+    denom = np.where(x_norm * x_erased_norm == 0, 1e-10, x_norm * x_erased_norm)
+    cos_sim = np.sum(X * X_erased, axis=1) / denom
+
+    total_var_before = np.sum(np.var(X, axis=0))
+    total_var_after = np.sum(np.var(X_erased, axis=0))
+    variance_ratio = float(total_var_after / total_var_before) if total_var_before > 0 else 0.0
+
+    return {
+        "mse": mse,
+        "mean_l2_distance": mean_l2_distance,
+        "cosine_similarity_mean": float(np.mean(cos_sim)),
+        "cosine_similarity_std": float(np.std(cos_sim)),
+        "variance_ratio": variance_ratio,
+    }
+
+
+def compute_mlp_probe_accuracy(
+    X: np.ndarray,
+    y: np.ndarray,
+    hidden_layer_sizes: tuple = (128,),
+    n_splits: int = 5,
+    random_state: int = 42,
+) -> float:
+    """Nonlinear probing: how well an MLP can still recover the erased concept.
+
+    KNN (compute_knn_accuracy) is already a nonlinear probe; this adds a
+    second model class as a cross-check. Written here for now; move to
+    lib/validate/ once the interface settles.
+    """
+    from sklearn.model_selection import StratifiedKFold, cross_val_score
+    from sklearn.neural_network import MLPClassifier
+
+    mlp = MLPClassifier(
+        hidden_layer_sizes=hidden_layer_sizes,
+        early_stopping=True,
+        max_iter=200,
+        random_state=random_state,
+    )
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    scores = cross_val_score(mlp, X, y, cv=skf, scoring="accuracy", n_jobs=-1)
+    return float(np.mean(scores))
+
+
 def parse_args() -> argparse.Namespace:
     """Define CLI args for all variable dimensions (used in GRID_ARGS / RUN_COMMAND)."""
     parser = argparse.ArgumentParser()
@@ -122,16 +176,22 @@ def main() -> None:
     X, y = X_all[mask], y_all[mask]
     logger.info(f"Subset: {len(slide_ids)} slides, {X.shape[0]} samples")
 
+    # y is an array of slide-id strings (object dtype); torch can't convert
+    # that directly, and sklearn's MLPClassifier chokes on string labels
+    # internally when early_stopping=True, so label-encode to ints once and
+    # reuse everywhere a numeric label is needed (one-hot, MLP probe).
+    unique_labels, y_codes = np.unique(y, return_inverse=True)
+
     # ── Before erasure (0003-style batch-effect validation) ────────────────
     eta_before = compute_eta_squared(X, y)
     knn_before = compute_knn_accuracy(X, y, n_neighbors=15, n_splits=5, random_state=seed)
-    logger.info(f"Before erasure: eta_sq_mean={eta_before['eta_sq_mean']:.4f} knn_acc={knn_before:.4f}")
+    mlp_before = compute_mlp_probe_accuracy(X, y_codes, random_state=seed)
+    logger.info(
+        f"Before erasure: eta_sq_mean={eta_before['eta_sq_mean']:.4f} "
+        f"knn_acc={knn_before:.4f} mlp_acc={mlp_before:.4f}"
+    )
 
     # ── Erasure (0005-style LEACE) ───────────────────────────────────────────
-    # y is an array of slide-id strings (object dtype); torch can't convert
-    # that directly, so label-encode to ints before one-hot encoding.
-    unique_labels, y_codes = np.unique(y, return_inverse=True)
-
     X_tensor = torch.from_numpy(X).float()
     y_tensor = one_hot(torch.from_numpy(y_codes).long(), num_classes=len(unique_labels)).float()
 
@@ -141,7 +201,19 @@ def main() -> None:
     # ── After erasure (0003-style batch-effect validation) ──────────────────
     eta_after = compute_eta_squared(X_erased, y)
     knn_after = compute_knn_accuracy(X_erased, y, n_neighbors=15, n_splits=5, random_state=seed)
-    logger.info(f"After erasure:  eta_sq_mean={eta_after['eta_sq_mean']:.4f} knn_acc={knn_after:.4f}")
+    mlp_after = compute_mlp_probe_accuracy(X_erased, y_codes, random_state=seed)
+    logger.info(
+        f"After erasure:  eta_sq_mean={eta_after['eta_sq_mean']:.4f} "
+        f"knn_acc={knn_after:.4f} mlp_acc={mlp_after:.4f}"
+    )
+
+    # ── How much information erasure removed (geometric evaluation) ─────────
+    geometric_change = compute_geometric_change(X, X_erased)
+    logger.info(
+        f"Geometric change: mse={geometric_change['mse']:.4f} "
+        f"cos_sim={geometric_change['cosine_similarity_mean']:.4f} "
+        f"variance_ratio={geometric_change['variance_ratio']:.4f}"
+    )
 
     results = {
         "n_slides": int(len(slide_ids)),
@@ -149,11 +221,14 @@ def main() -> None:
         "before_erasure": {
             "compute_eta_squared": eta_before,
             "compute_knn_accuracy": knn_before,
+            "compute_mlp_probe_accuracy": mlp_before,
         },
         "after_erasure": {
             "compute_eta_squared": eta_after,
             "compute_knn_accuracy": knn_after,
+            "compute_mlp_probe_accuracy": mlp_after,
         },
+        "geometric_change": geometric_change,
     }
 
     # ── Save results ──────────────────────────────────────────────────────────
