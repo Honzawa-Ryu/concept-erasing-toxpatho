@@ -111,6 +111,7 @@ def main() -> None:
     # ぼやけスコアは連続値なのでone-hot化はせず、そのままZとしてLEACEに渡す。
     from lib.data_process.load import load_blur_and_uni_features
     from lib.validate.batch_effect import (
+        compute_effective_rank,
         compute_geometric_change,
         compute_knn_regression_r2,
         compute_linear_regression_r2,
@@ -137,7 +138,11 @@ def main() -> None:
     # 意図通り効いたかの主な判定基準になる。
     knn_r2_before = compute_knn_regression_r2(X, Z, n_neighbors=15, n_splits=5, random_state=seed)
     linear_r2_before = compute_linear_regression_r2(X, Z, n_splits=5, random_state=seed)
-    logger.info(f"Before erasure: knn_r2={knn_r2_before:.4f} linear_r2={linear_r2_before:.4f}")
+    effective_rank_before = compute_effective_rank(X)
+    logger.info(
+        f"Before erasure: knn_r2={knn_r2_before:.4f} linear_r2={linear_r2_before:.4f} "
+        f"effective_rank_ratio={effective_rank_before['effective_rank_ratio']:.4f}"
+    )
 
     # ── Erasure (LEACE, continuous concept) ──────────────────────────────────
     X_tensor = torch.from_numpy(X).float()
@@ -149,7 +154,11 @@ def main() -> None:
     # ── After erasure ────────────────────────────────────────────────────────
     knn_r2_after = compute_knn_regression_r2(X_erased, Z, n_neighbors=15, n_splits=5, random_state=seed)
     linear_r2_after = compute_linear_regression_r2(X_erased, Z, n_splits=5, random_state=seed)
-    logger.info(f"After erasure:  knn_r2={knn_r2_after:.4f} linear_r2={linear_r2_after:.4f}")
+    effective_rank_after = compute_effective_rank(X_erased)
+    logger.info(
+        f"After erasure:  knn_r2={knn_r2_after:.4f} linear_r2={linear_r2_after:.4f} "
+        f"effective_rank_ratio={effective_rank_after['effective_rank_ratio']:.4f}"
+    )
 
     # ── How much information erasure removed (geometric evaluation) ─────────
     geometric_change = compute_geometric_change(X, X_erased)
@@ -166,10 +175,12 @@ def main() -> None:
         "before_erasure": {
             "compute_knn_regression_r2": knn_r2_before,
             "compute_linear_regression_r2": linear_r2_before,
+            "compute_effective_rank": effective_rank_before,
         },
         "after_erasure": {
             "compute_knn_regression_r2": knn_r2_after,
             "compute_linear_regression_r2": linear_r2_after,
+            "compute_effective_rank": effective_rank_after,
         },
         "geometric_change": geometric_change,
     }

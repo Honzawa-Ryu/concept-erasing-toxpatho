@@ -201,6 +201,50 @@ def compute_mlp_probe_accuracy(
 
 
 
+def compute_effective_rank(X: np.ndarray) -> Dict[str, float]:
+    """
+    表現Xの有効ランク(effective rank)を計算する関数（Roy & Vetterli, 2007）。
+
+    共分散行列の固有値から求めた特異値分布のシャノンエントロピーの指数として
+    定義される。通常の(整数の)ランクと違い、「支配的な方向が実質何本あるか」を
+    連続値で捉える指標で、1本の方向に分散が集中していれば1に近づき、
+    全次元に均等に分散が広がっていれば全次元数に近づく。
+
+    erasureで特定の方向を潰すと、この値も潰れた分だけ下がる（＝表現が
+    低ランク化した/情報の多様性が失われた）ことを検出できる。
+
+    Parameters
+    ----------
+    X : np.ndarray
+        潜在表現のデータ（各次元の特徴量を含む）。
+
+    Returns
+    -------
+    Dict[str, float]
+        "effective_rank": 有効ランクの値そのもの（1〜Dの範囲）。
+        "effective_rank_ratio": 全次元数Dで正規化した比率（0〜1の範囲）。
+    """
+    total_dim = X.shape[1]
+
+    X_centered = X - X.mean(axis=0)
+    cov = (X_centered.T @ X_centered) / (len(X_centered) - 1)
+    # 共分散行列は対称なのでeigvalshを使う（数値誤差で出る微小な負値はクリップ）。
+    eigenvalues = np.clip(np.linalg.eigvalsh(cov), a_min=0, a_max=None)
+
+    # 特異値 = sqrt(固有値)。定数倍(sqrt(n-1))は正規化で相殺されるため省略できる。
+    singular_values = np.sqrt(eigenvalues)
+    singular_values = singular_values[singular_values > 1e-12]
+
+    p = singular_values / singular_values.sum()
+    entropy = -np.sum(p * np.log(p))
+    effective_rank = float(np.exp(entropy))
+
+    return {
+        "effective_rank": effective_rank,
+        "effective_rank_ratio": effective_rank / total_dim,
+    }
+
+
 def compute_geometric_change(X: np.ndarray, X_erased: np.ndarray) -> dict:
     """Geometric evaluation of how much erasure deformed the representation.
 
