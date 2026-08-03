@@ -1,0 +1,16 @@
+# ============================================================
+# Experiment Configuration
+# ============================================================
+# - Fixed hyperparameters go here.
+# - Variable dimensions (model, seed, prompt, ...) go in run_slurm.sh GRID_ARGS.
+# - Do NOT hardcode values you intend to sweep.
+# ============================================================
+
+# --- Hyperparameters ---
+seed: 42
+# max_tokens: 512
+# temperature: 0.0
+
+# Smoke-test scale: only use this many slides (out of 998) so the
+# blur-score erasure (compute -> LEACE -> re-probe) pipeline can be checked quickly.
+n_slides: 10

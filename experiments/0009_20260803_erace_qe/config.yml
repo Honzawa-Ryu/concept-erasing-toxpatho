@@ -1,0 +1,19 @@
+# ============================================================
+# Experiment Configuration
+# ============================================================
+# - Fixed hyperparameters go here.
+# - Variable dimensions (model, seed, prompt, ...) go in run_slurm.sh GRID_ARGS.
+# - Do NOT hardcode values you intend to sweep.
+# ============================================================
+
+# --- Hyperparameters ---
+seed: 42
+# max_tokens: 512
+# temperature: 0.0
+
+# Smoke-test scale: only use this many slides (out of 998), same as exp0008.
+n_slides: 10
+
+# QuadraticEraserは離散クラスラベルが必要なため、連続値のぼやけスコアを
+# 分位点でこの数のクラスに分割する（例: 4なら四分位）。
+n_bins: 4

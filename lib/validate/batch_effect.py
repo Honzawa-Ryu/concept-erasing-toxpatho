@@ -3,8 +3,9 @@ from typing import Dict, Tuple, Union
 
 import h5py
 import numpy as np
-from sklearn.model_selection import StratifiedKFold, cross_val_score
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import KFold, StratifiedKFold, cross_val_score
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 def compute_eta_squared(X: np.ndarray, y: np.ndarray) -> Dict[str, float]:
     """
@@ -94,6 +95,80 @@ def compute_knn_accuracy(
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
     scores = cross_val_score(knn, X, y, cv=skf, scoring='accuracy', n_jobs=-1)
+
+    return float(np.mean(scores))
+
+
+def compute_knn_regression_r2(
+    X: np.ndarray,
+    y: np.ndarray,
+    n_neighbors: int = 15,
+    n_splits: int = 5,
+    random_state: int = 42
+    ) -> float:
+    """
+    K-Fold クロスバリデーションを使用して、連続値の概念(y)をKNN回帰でどれだけ
+    復元できるかをR²で評価する関数。compute_knn_accuracyの回帰版（yが
+    スライドIDのような離散ラベルではなく、ぼやけスコアのような連続値の場合に使う）。
+
+    Parameters
+    ----------
+    X : np.ndarray
+        潜在表現のデータ（各次元の特徴量を含む）。
+    y : np.ndarray
+        連続値の概念ラベル（例: ぼやけスコア）。
+    n_neighbors : int, optional
+        KNN回帰器の近傍数（デフォルトは15）。
+    n_splits : int, optional
+        クロスバリデーションの分割数（デフォルトは5）。
+    random_state : int, optional
+        乱数シード（デフォルトは42）。
+
+    Returns
+    -------
+    float
+        KNN回帰器の平均R²スコア。
+    """
+    knn = KNeighborsRegressor(n_neighbors=n_neighbors, metric='euclidean', n_jobs=1)
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+
+    scores = cross_val_score(knn, X, y, cv=kf, scoring='r2', n_jobs=-1)
+
+    return float(np.mean(scores))
+
+
+def compute_linear_regression_r2(
+    X: np.ndarray,
+    y: np.ndarray,
+    n_splits: int = 5,
+    random_state: int = 42
+    ) -> float:
+    """
+    K-Fold クロスバリデーションを使用して、連続値の概念(y)を線形回帰でどれだけ
+    復元できるかをR²で評価する関数。
+
+    LEACEは線形の予測可能性しか消去を保証しないため、compute_knn_regression_r2
+    （非線形プローブ）だけでは「線形の手がかりが消えたか」が分からない。この関数を
+    ペアで使うことで、消去前後の線形R²がほぼ0まで落ちているかを確認できる。
+
+    Parameters
+    ----------
+    X : np.ndarray
+        潜在表現のデータ（各次元の特徴量を含む）。
+    y : np.ndarray
+        連続値の概念ラベル（例: ぼやけスコア）。
+    n_splits : int, optional
+        クロスバリデーションの分割数（デフォルトは5）。
+    random_state : int, optional
+        乱数シード（デフォルトは42）。
+
+    Returns
+    -------
+    float
+        線形回帰の平均R²スコア。
+    """
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    scores = cross_val_score(LinearRegression(), X, y, cv=kf, scoring='r2', n_jobs=-1)
 
     return float(np.mean(scores))
 
