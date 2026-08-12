@@ -1,0 +1,21 @@
+# ============================================================
+# Experiment Configuration
+# ============================================================
+# - Fixed hyperparameters go here.
+# - Variable dimensions (model, seed, prompt, ...) go in run_slurm.sh GRID_ARGS.
+# - Do NOT hardcode values you intend to sweep.
+# ============================================================
+
+# --- Hyperparameters ---
+seed: 42
+# max_tokens: 512
+# temperature: 0.0
+
+# 0(またはコメントアウト)なら features_memmap_output にある998スライド全部を
+# 使う。動作確認用に小さい値を入れると、その枚数だけ無作為に使う。
+n_slides: 0
+
+# スライドID(バッチ)のKNNプローブ用に、スライドごとにこの枚数だけ均等に
+# サンプリングする(無作為抽出だとクラス数が数百あるとき偶然0件になる
+# クラスが出てKFoldが壊れうるため)。
+knn_patches_per_slide: 50

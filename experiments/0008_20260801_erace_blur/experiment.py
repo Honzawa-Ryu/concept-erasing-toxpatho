@@ -129,7 +129,7 @@ def main() -> None:
     slide_ids = sorted(image_ids & feature_ids)[:n_slides]
     logger.info(f"Subset: {len(slide_ids)} slides -> {slide_ids}")
 
-    X, Z = load_blur_and_uni_features(images_dir, features_dir, blur_output_dir, slide_ids)
+    X, Z, _ = load_blur_and_uni_features(images_dir, features_dir, blur_output_dir, slide_ids)
     logger.info(f"Loaded X={X.shape} Z={Z.shape}")
 
     # ── Before erasure ───────────────────────────────────────────────────────

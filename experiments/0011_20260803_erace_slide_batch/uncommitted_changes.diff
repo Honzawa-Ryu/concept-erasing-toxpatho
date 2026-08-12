@@ -1,0 +1,205 @@
+diff --git a/experiments/0008_20260801_erace_blur/experiment.py b/experiments/0008_20260801_erace_blur/experiment.py
+index 2db6745..fd10fe8 100644
+--- a/experiments/0008_20260801_erace_blur/experiment.py
++++ b/experiments/0008_20260801_erace_blur/experiment.py
+@@ -129,7 +129,7 @@ def main() -> None:
+     slide_ids = sorted(image_ids & feature_ids)[:n_slides]
+     logger.info(f"Subset: {len(slide_ids)} slides -> {slide_ids}")
+ 
+-    X, Z = load_blur_and_uni_features(images_dir, features_dir, blur_output_dir, slide_ids)
++    X, Z, _ = load_blur_and_uni_features(images_dir, features_dir, blur_output_dir, slide_ids)
+     logger.info(f"Loaded X={X.shape} Z={Z.shape}")
+ 
+     # ── Before erasure ───────────────────────────────────────────────────────
+diff --git a/experiments/0009_20260803_erace_qe/experiment.py b/experiments/0009_20260803_erace_qe/experiment.py
+index 40dbbf8..fa7d613 100644
+--- a/experiments/0009_20260803_erace_qe/experiment.py
++++ b/experiments/0009_20260803_erace_qe/experiment.py
+@@ -136,7 +136,7 @@ def main() -> None:
+     slide_ids = sorted(image_ids & feature_ids)[:n_slides]
+     logger.info(f"Subset: {len(slide_ids)} slides -> {slide_ids}")
+ 
+-    X, Z = load_blur_and_uni_features(images_dir, features_dir, blur_output_dir, slide_ids)
++    X, Z, _ = load_blur_and_uni_features(images_dir, features_dir, blur_output_dir, slide_ids)
+     logger.info(f"Loaded X={X.shape} Z={Z.shape}")
+ 
+     # ── 連続値のぼやけスコアを分位点でn_bins個の離散クラスに変換 ─────────────
+diff --git a/experiments/latest b/experiments/latest
+index d19d6dc..b24da5c 120000
+--- a/experiments/latest
++++ b/experiments/latest
+@@ -1 +1 @@
+-/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho/experiments/0009_20260803_erace_qe
+\ No newline at end of file
++/workspace/andre01/honzawa/02-playground/concept-erasing-toxpatho/experiments/0010_20260803_finding_utility_check
+\ No newline at end of file
+diff --git a/lib/data_process/load.py b/lib/data_process/load.py
+index 5586bd6..4cbf909 100644
+--- a/lib/data_process/load.py
++++ b/lib/data_process/load.py
+@@ -69,7 +69,7 @@ def load_blur_and_uni_features(
+     features_dir: Union[str, Path],
+     blur_output_dir: Union[str, Path],
+     slide_ids: List[str],
+-) -> Tuple[np.ndarray, np.ndarray]:
++) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+     """
+     指定したスライド群について、UNI特徴量(features_memmap_output)とぼやけスコアを
+     パッチ単位で対応づけて読み込む。
+@@ -86,6 +86,9 @@ def load_blur_and_uni_features(
+         UNI特徴量。
+     Z : np.ndarray, shape (total_samples,)
+         ぼやけスコア。
++    slide_id_per_patch : np.ndarray, shape (total_samples,)
++        各行がどのスライド由来かを示すslide_id文字列の配列
++        （スライド単位のラベルをパッチ単位にブロードキャストする用途などに使う）。
+     """
+     from lib.data_process.blur_score import process_single_slide_blur_score
+ 
+@@ -93,7 +96,7 @@ def load_blur_and_uni_features(
+     features_dir = Path(features_dir)
+     blur_output_dir = Path(blur_output_dir)
+ 
+-    X_parts, Z_parts = [], []
++    X_parts, Z_parts, slide_id_parts = [], [], []
+     for slide_id in slide_ids:
+         process_single_slide_blur_score(
+             memmap_dir=images_dir / slide_id,
+@@ -119,8 +122,10 @@ def load_blur_and_uni_features(
+ 
+         X_parts.append(np.array(x))
+         Z_parts.append(np.array(z))
++        slide_id_parts.append(np.full(n, slide_id, dtype=object))
+ 
+     X = np.concatenate(X_parts, axis=0)
+     Z = np.concatenate(Z_parts, axis=0)
++    slide_id_per_patch = np.concatenate(slide_id_parts, axis=0)
+ 
+-    return X, Z
+\ No newline at end of file
++    return X, Z, slide_id_per_patch
+\ No newline at end of file
+diff --git a/lib/validate/batch_effect.py b/lib/validate/batch_effect.py
+index bc4150f..0188f73 100644
+--- a/lib/validate/batch_effect.py
++++ b/lib/validate/batch_effect.py
+@@ -3,8 +3,8 @@ from typing import Dict, Tuple, Union
+ 
+ import h5py
+ import numpy as np
+-from sklearn.linear_model import LinearRegression
+-from sklearn.model_selection import KFold, StratifiedKFold, cross_val_score
++from sklearn.linear_model import LinearRegression, LogisticRegression
++from sklearn.model_selection import KFold, StratifiedGroupKFold, StratifiedKFold, cross_val_score
+ from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+ 
+ def compute_eta_squared(X: np.ndarray, y: np.ndarray) -> Dict[str, float]:
+@@ -99,6 +99,55 @@ def compute_knn_accuracy(
+     return float(np.mean(scores))
+ 
+ 
++def compute_knn_accuracy_grouped(
++    X: np.ndarray,
++    y: np.ndarray,
++    groups: np.ndarray,
++    n_neighbors: int = 15,
++    n_splits: int = 5,
++    random_state: int = 42
++    ) -> float:
++    """
++    StratifiedGroupKFoldを使用して、潜在表現のKNN分類器の精度を計算する関数。
++    compute_knn_accuracyのグループ考慮版。
++
++    compute_knn_accuracyはサンプル単位で無作為にfoldへ分割するため、例えば
++    「同じスライド由来の複数パッチ」のように1グループが複数サンプルにまたがる
++    データでは、同じスライドのパッチが訓練foldとテストfoldの両方に混入し、
++    「そのスライド固有の見た目」を覚えるだけで精度が水増しされるリーク
++    (leakage)が起きる。この関数はgroups（例: スライドID）でグループ化した上で
++    fold分割することで、同じグループのサンプルが訓練/テストに分かれて入らない
++    ようにする。
++
++    Parameters
++    ----------
++    X : np.ndarray
++        潜在表現のデータ（各次元の特徴量を含む）。
++    y : np.ndarray
++        分類したいラベル（例: 病理所見の有無）。
++    groups : np.ndarray
++        サンプルが属するグループ（例: スライドID）。同じグループのサンプルは
++        必ず同じfold（訓練 or テスト）に入る。
++    n_neighbors : int, optional
++        KNN分類器の近傍数（デフォルトは15）。
++    n_splits : int, optional
++        クロスバリデーションの分割数（デフォルトは5）。
++    random_state : int, optional
++        乱数シード（デフォルトは42）。
++
++    Returns
++    -------
++    float
++        KNN分類器の平均精度。
++    """
++    knn = KNeighborsClassifier(n_neighbors=n_neighbors, metric='euclidean', n_jobs=1)
++    sgkf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
++
++    scores = cross_val_score(knn, X, y, groups=groups, cv=sgkf, scoring='accuracy', n_jobs=-1)
++
++    return float(np.mean(scores))
++
++
+ def compute_knn_regression_r2(
+     X: np.ndarray,
+     y: np.ndarray,
+@@ -173,6 +222,52 @@ def compute_linear_regression_r2(
+     return float(np.mean(scores))
+ 
+ 
++def compute_logreg_probe(
++    X: np.ndarray,
++    y: np.ndarray,
++    n_splits: int = 5,
++    random_state: int = 42
++    ) -> Dict[str, float]:
++    """
++    L2正則化ロジスティック回帰による二値分類プローブ。
++
++    サンプル数が次元数より少ない（例: パッチをスライド単位で平均プーリングした
++    特徴量はサンプル数=スライド数と少なくなりがち）ような高次元・少サンプルの
++    状況では、KNNは次元の呪いで機能しにくい（実測でも同条件のKNNはchance level
++    だった）が、正則化された線形モデルは安定して線形の手がかりを検出できる。
++    クラス不均衡を考慮してclass_weight="balanced"を使い、balanced_accuracyと
++    ROC-AUCの両方を返す（不均衡データでは素のaccuracyは多数派クラス予測だけで
++    高くなってしまい当てにならないため）。
++
++    Parameters
++    ----------
++    X : np.ndarray
++        潜在表現のデータ（各次元の特徴量を含む）。
++    y : np.ndarray
++        二値ラベル（例: 病理所見の有無）。
++    n_splits : int, optional
++        クロスバリデーションの分割数（デフォルトは5）。
++    random_state : int, optional
++        乱数シード（デフォルトは42）。
++
++    Returns
++    -------
++    Dict[str, float]
++        "balanced_accuracy": 平均balanced accuracy。
++        "roc_auc": 平均ROC-AUC。
++    """
++    clf = LogisticRegression(max_iter=2000, class_weight='balanced')
++    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
++
++    balanced_acc = cross_val_score(clf, X, y, cv=skf, scoring='balanced_accuracy', n_jobs=-1)
++    roc_auc = cross_val_score(clf, X, y, cv=skf, scoring='roc_auc', n_jobs=-1)
++
++    return {
++        "balanced_accuracy": float(np.mean(balanced_acc)),
++        "roc_auc": float(np.mean(roc_auc)),
++    }
++
++
+ def compute_mlp_probe_accuracy(
+     X: np.ndarray,
+     y: np.ndarray,

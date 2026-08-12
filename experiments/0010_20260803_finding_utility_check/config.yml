@@ -1,0 +1,27 @@
+# ============================================================
+# Experiment Configuration
+# ============================================================
+# - Fixed hyperparameters go here.
+# - Variable dimensions (model, seed, prompt, ...) go in run_slurm.sh GRID_ARGS.
+# - Do NOT hardcode values you intend to sweep.
+# ============================================================
+
+# --- Hyperparameters ---
+seed: 42
+# max_tokens: 512
+# temperature: 0.0
+
+# has_finding True/Falseそれぞれからこの枚数ずつ抽出する
+# (合計 最大 2 * n_slides_per_class 枚。ただしhas_finding=Trueはローカルに
+# 998スライド中193枚しか無いので、大きい値を入れるとpos側は193枚で頭打ちになり、
+# neg側だけ増える＝実質「有るだけ全部使う」動作になる。998に設定すれば
+# ローカルにマッチする998スライド全部(所見あり193 + 正常805)を使う)。
+n_slides_per_class: 998
+
+# QuadraticEraserは離散クラスラベルが必要なため、連続値のぼやけスコアを
+# 分位点でこの数のクラスに分割する（例: 4なら四分位。exp0009と同じ）。
+n_bins: 4
+
+# KNNベースのprobeはサンプル数の2乗近くコストがかかるため、パッチ全量ではなく
+# 固定シードで抽出したこの件数の部分集合で評価する。
+knn_eval_subsample: 10000

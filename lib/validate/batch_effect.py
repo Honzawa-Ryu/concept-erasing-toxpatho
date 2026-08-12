@@ -3,8 +3,14 @@ from typing import Dict, Tuple, Union
 
 import h5py
 import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import KFold, StratifiedKFold, cross_val_score
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.model_selection import (
+    GroupKFold,
+    KFold,
+    StratifiedGroupKFold,
+    StratifiedKFold,
+    cross_val_score,
+)
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 def compute_eta_squared(X: np.ndarray, y: np.ndarray) -> Dict[str, float]:
@@ -99,6 +105,55 @@ def compute_knn_accuracy(
     return float(np.mean(scores))
 
 
+def compute_knn_accuracy_grouped(
+    X: np.ndarray,
+    y: np.ndarray,
+    groups: np.ndarray,
+    n_neighbors: int = 15,
+    n_splits: int = 5,
+    random_state: int = 42
+    ) -> float:
+    """
+    StratifiedGroupKFoldを使用して、潜在表現のKNN分類器の精度を計算する関数。
+    compute_knn_accuracyのグループ考慮版。
+
+    compute_knn_accuracyはサンプル単位で無作為にfoldへ分割するため、例えば
+    「同じスライド由来の複数パッチ」のように1グループが複数サンプルにまたがる
+    データでは、同じスライドのパッチが訓練foldとテストfoldの両方に混入し、
+    「そのスライド固有の見た目」を覚えるだけで精度が水増しされるリーク
+    (leakage)が起きる。この関数はgroups（例: スライドID）でグループ化した上で
+    fold分割することで、同じグループのサンプルが訓練/テストに分かれて入らない
+    ようにする。
+
+    Parameters
+    ----------
+    X : np.ndarray
+        潜在表現のデータ（各次元の特徴量を含む）。
+    y : np.ndarray
+        分類したいラベル（例: 病理所見の有無）。
+    groups : np.ndarray
+        サンプルが属するグループ（例: スライドID）。同じグループのサンプルは
+        必ず同じfold（訓練 or テスト）に入る。
+    n_neighbors : int, optional
+        KNN分類器の近傍数（デフォルトは15）。
+    n_splits : int, optional
+        クロスバリデーションの分割数（デフォルトは5）。
+    random_state : int, optional
+        乱数シード（デフォルトは42）。
+
+    Returns
+    -------
+    float
+        KNN分類器の平均精度。
+    """
+    knn = KNeighborsClassifier(n_neighbors=n_neighbors, metric='euclidean', n_jobs=1)
+    sgkf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+
+    scores = cross_val_score(knn, X, y, groups=groups, cv=sgkf, scoring='accuracy', n_jobs=-1)
+
+    return float(np.mean(scores))
+
+
 def compute_knn_regression_r2(
     X: np.ndarray,
     y: np.ndarray,
@@ -137,6 +192,57 @@ def compute_knn_regression_r2(
     return float(np.mean(scores))
 
 
+def compute_knn_regression_r2_grouped(
+    X: np.ndarray,
+    y: np.ndarray,
+    groups: np.ndarray,
+    n_neighbors: int = 15,
+    n_splits: int = 5,
+    random_state: int = 42
+    ) -> float:
+    """
+    GroupKFoldを使用して、潜在表現のKNN回帰R²を計算する関数。
+    compute_knn_regression_r2のグループ考慮版。
+
+    compute_knn_regression_r2は無作為にfoldへ分割するため、例えば
+    「同じスライド由来の複数パッチ」のように1グループが複数サンプルに
+    またがるデータでは、同じスライドのパッチが訓練foldとテストfoldの両方に
+    混入するリークが起きる。UNI特徴量は「どのスライドか」をほぼ完璧に
+    識別できてしまう（compute_knn_accuracy参照）ため、その気になれば
+    「テストパッチがどのスライドかを当てて、訓練foldにある同じスライドの
+    平均値を答える」というショートカットで精度が水増しされうる。この関数は
+    groups（例: スライドID）でグループ化した上でfold分割することで、
+    同じグループのサンプルが訓練/テストに分かれて入らないようにする。
+
+    Parameters
+    ----------
+    X : np.ndarray
+        潜在表現のデータ（各次元の特徴量を含む）。
+    y : np.ndarray
+        連続値の概念ラベル（例: ぼやけスコア）。
+    groups : np.ndarray
+        サンプルが属するグループ（例: スライドID）。同じグループのサンプルは
+        必ず同じfold（訓練 or テスト）に入る。
+    n_neighbors : int, optional
+        KNN回帰器の近傍数（デフォルトは15）。
+    n_splits : int, optional
+        クロスバリデーションの分割数（デフォルトは5）。
+    random_state : int, optional
+        乱数シード（デフォルトは42。GroupKFoldのシャッフルに使う）。
+
+    Returns
+    -------
+    float
+        KNN回帰器の平均R²スコア。
+    """
+    knn = KNeighborsRegressor(n_neighbors=n_neighbors, metric='euclidean', n_jobs=1)
+    gkf = GroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+
+    scores = cross_val_score(knn, X, y, groups=groups, cv=gkf, scoring='r2', n_jobs=-1)
+
+    return float(np.mean(scores))
+
+
 def compute_linear_regression_r2(
     X: np.ndarray,
     y: np.ndarray,
@@ -171,6 +277,88 @@ def compute_linear_regression_r2(
     scores = cross_val_score(LinearRegression(), X, y, cv=kf, scoring='r2', n_jobs=-1)
 
     return float(np.mean(scores))
+
+
+def compute_linear_regression_r2_grouped(
+    X: np.ndarray,
+    y: np.ndarray,
+    groups: np.ndarray,
+    n_splits: int = 5,
+    random_state: int = 42
+    ) -> float:
+    """
+    GroupKFoldを使用して、連続値の概念(y)の線形回帰R²を計算する関数。
+    compute_linear_regression_r2のグループ考慮版（compute_knn_regression_r2_grouped
+    と同じ理由でパッチ単位のリークを防ぐ）。
+
+    Parameters
+    ----------
+    X : np.ndarray
+        潜在表現のデータ（各次元の特徴量を含む）。
+    y : np.ndarray
+        連続値の概念ラベル（例: ぼやけスコア）。
+    groups : np.ndarray
+        サンプルが属するグループ（例: スライドID）。
+    n_splits : int, optional
+        クロスバリデーションの分割数（デフォルトは5）。
+    random_state : int, optional
+        乱数シード（デフォルトは42。GroupKFoldのシャッフルに使う）。
+
+    Returns
+    -------
+    float
+        線形回帰の平均R²スコア。
+    """
+    gkf = GroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    scores = cross_val_score(LinearRegression(), X, y, groups=groups, cv=gkf, scoring='r2', n_jobs=-1)
+
+    return float(np.mean(scores))
+
+
+def compute_logreg_probe(
+    X: np.ndarray,
+    y: np.ndarray,
+    n_splits: int = 5,
+    random_state: int = 42
+    ) -> Dict[str, float]:
+    """
+    L2正則化ロジスティック回帰による二値分類プローブ。
+
+    サンプル数が次元数より少ない（例: パッチをスライド単位で平均プーリングした
+    特徴量はサンプル数=スライド数と少なくなりがち）ような高次元・少サンプルの
+    状況では、KNNは次元の呪いで機能しにくい（実測でも同条件のKNNはchance level
+    だった）が、正則化された線形モデルは安定して線形の手がかりを検出できる。
+    クラス不均衡を考慮してclass_weight="balanced"を使い、balanced_accuracyと
+    ROC-AUCの両方を返す（不均衡データでは素のaccuracyは多数派クラス予測だけで
+    高くなってしまい当てにならないため）。
+
+    Parameters
+    ----------
+    X : np.ndarray
+        潜在表現のデータ（各次元の特徴量を含む）。
+    y : np.ndarray
+        二値ラベル（例: 病理所見の有無）。
+    n_splits : int, optional
+        クロスバリデーションの分割数（デフォルトは5）。
+    random_state : int, optional
+        乱数シード（デフォルトは42）。
+
+    Returns
+    -------
+    Dict[str, float]
+        "balanced_accuracy": 平均balanced accuracy。
+        "roc_auc": 平均ROC-AUC。
+    """
+    clf = LogisticRegression(max_iter=2000, class_weight='balanced')
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+
+    balanced_acc = cross_val_score(clf, X, y, cv=skf, scoring='balanced_accuracy', n_jobs=-1)
+    roc_auc = cross_val_score(clf, X, y, cv=skf, scoring='roc_auc', n_jobs=-1)
+
+    return {
+        "balanced_accuracy": float(np.mean(balanced_acc)),
+        "roc_auc": float(np.mean(roc_auc)),
+    }
 
 
 def compute_mlp_probe_accuracy(

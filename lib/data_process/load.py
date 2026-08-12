@@ -69,7 +69,7 @@ def load_blur_and_uni_features(
     features_dir: Union[str, Path],
     blur_output_dir: Union[str, Path],
     slide_ids: List[str],
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     指定したスライド群について、UNI特徴量(features_memmap_output)とぼやけスコアを
     パッチ単位で対応づけて読み込む。
@@ -86,6 +86,9 @@ def load_blur_and_uni_features(
         UNI特徴量。
     Z : np.ndarray, shape (total_samples,)
         ぼやけスコア。
+    slide_id_per_patch : np.ndarray, shape (total_samples,)
+        各行がどのスライド由来かを示すslide_id文字列の配列
+        （スライド単位のラベルをパッチ単位にブロードキャストする用途などに使う）。
     """
     from lib.data_process.blur_score import process_single_slide_blur_score
 
@@ -93,7 +96,7 @@ def load_blur_and_uni_features(
     features_dir = Path(features_dir)
     blur_output_dir = Path(blur_output_dir)
 
-    X_parts, Z_parts = [], []
+    X_parts, Z_parts, slide_id_parts = [], [], []
     for slide_id in slide_ids:
         process_single_slide_blur_score(
             memmap_dir=images_dir / slide_id,
@@ -119,8 +122,10 @@ def load_blur_and_uni_features(
 
         X_parts.append(np.array(x))
         Z_parts.append(np.array(z))
+        slide_id_parts.append(np.full(n, slide_id, dtype=object))
 
     X = np.concatenate(X_parts, axis=0)
     Z = np.concatenate(Z_parts, axis=0)
+    slide_id_per_patch = np.concatenate(slide_id_parts, axis=0)
 
-    return X, Z
+    return X, Z, slide_id_per_patch
